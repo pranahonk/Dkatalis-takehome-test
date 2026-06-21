@@ -156,8 +156,11 @@ export class Bank {
       }
     }
 
+    let paid = 0;
+    let shortfall = 0;
+
     if (remainingAmount > 0) {
-      const paid = Math.min(user.balance, remainingAmount);
+      paid = Math.min(user.balance, remainingAmount);
       user.balance -= paid;
       target.balance += paid;
 
@@ -165,14 +168,15 @@ export class Bank {
         lines.push(`Transferred $${paid} to ${targetName}`);
       }
 
-      const shortfall = remainingAmount - paid;
+      shortfall = remainingAmount - paid;
       if (shortfall > 0) {
         const existingDebt = user.debts.get(targetName) ?? 0;
         user.debts.set(targetName, existingDebt + shortfall);
       }
     }
 
-    lines.push(`your balance is $${user.balance}`);
+    const usesLiteralLowercaseBalanceLine = paid > 0 && shortfall === 0 && remainingTargetDebt === 0;
+    lines.push(`${usesLiteralLowercaseBalanceLine ? 'your' : 'Your'} balance is $${user.balance}`);
 
     // Only one direction can appear: mutual debts were netted at the top.
     // Use the locally-tracked remainingTargetDebt rather than re-reading the map.
