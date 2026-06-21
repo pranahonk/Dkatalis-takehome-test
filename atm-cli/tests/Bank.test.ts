@@ -198,3 +198,108 @@ describe('Bank transfer', () => {
     expect(result.lines).toEqual(['Cannot transfer to yourself.']);
   });
 });
+
+describe('Bank transfer – fix pass (negative amount + mutual-debt contradiction)', () => {
+  it('rejects a negative transfer amount', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+
+    const result = bank.transfer('Bob', -50);
+
+    expect(result.lines).toEqual(['Transfer amount must be positive.']);
+    expect(bank.getCurrentUser()!.balance).toBe(100);
+  });
+
+  it('rejects a zero transfer amount', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+    bank.logout();
+    bank.login('Bob');
+
+    const result = bank.transfer('Alice', 0);
+
+    expect(result.lines).toEqual(['Transfer amount must be positive.']);
+    expect(bank.getCurrentUser()!.balance).toBe(0);
+  });
+
+  it('does not corrupt debt state when negative amount is passed', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    bank.getCurrentUser()!.debts.set('Alice', 40);
+
+    bank.transfer('Alice', -10);
+
+    // Debt must remain unchanged
+    expect(bank.getCurrentUser()!.debts.get('Alice')).toBe(40);
+    expect(bank.getCurrentUser()!.balance).toBe(0);
+  });
+
+  it('never emits both owed-to and owed-from for the same party (mutual debt, user nets positive)', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    // Bob owes Alice $50
+    bank.getCurrentUser()!.debts.set('Alice', 50);
+    bank.logout();
+    // Alice owes Bob $30
+    bank.login('Alice');
+    bank.getCurrentUser()!.debts.set('Bob', 30);
+
+    // Alice transfers $10 to Bob — after netting: Bob still owes Alice net $20
+    const result = bank.transfer('Bob', 10);
+
+    const hasOwedTo = result.lines.some(l => l.includes('Owed') && l.includes('to Bob'));
+    const hasOwedFrom = result.lines.some(l => l.includes('Owed') && l.includes('from Bob'));
+    expect(hasOwedTo && hasOwedFrom).toBe(false);
+  });
+
+  it('never emits both owed-to and owed-from for the same party (mutual debt, target nets positive)', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    // Bob owes Alice $20
+    bank.getCurrentUser()!.debts.set('Alice', 20);
+    bank.logout();
+    // Alice owes Bob $50
+    bank.login('Alice');
+    bank.getCurrentUser()!.debts.set('Bob', 50);
+
+    // Alice transfers $5 to Bob
+    const result = bank.transfer('Bob', 5);
+
+    const hasOwedTo = result.lines.some(l => l.includes('Owed') && l.includes('to Bob'));
+    const hasOwedFrom = result.lines.some(l => l.includes('Owed') && l.includes('from Bob'));
+    expect(hasOwedTo && hasOwedFrom).toBe(false);
+  });
+
+  it('nets mutual debt to one direction when target debt exceeds user debt', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.getCurrentUser()!.debts.set('Bob', 20);
+    bank.logout();
+    bank.login('Bob');
+    bank.getCurrentUser()!.debts.set('Alice', 30);
+    bank.logout();
+    bank.login('Alice');
+    bank.deposit(100);
+
+    // After netting: Bob owes Alice net $10 (30-20). Transfer $5 to Bob.
+    // Offset: Bob owes Alice $10, offset = min(5,10) = 5, Bob now owes Alice $5, remaining = 0.
+    // No cash paid, no shortfall. Output: balance line + "Owed $5 from Bob".
+    const result = bank.transfer('Bob', 5);
+
+    expect(result.lines).not.toContain(expect.stringContaining('Owed $5 to Bob'));
+    expect(result.lines.some(l => l.includes('Owed') && l.includes('to Bob'))).toBe(false);
+    expect(result.lines.some(l => l.includes('Owed') && l.includes('from Bob'))).toBe(true);
+    // No contradictory both-directions
+    const hasOwedTo = result.lines.some(l => l.includes('Owed') && l.includes('to Bob'));
+    const hasOwedFrom = result.lines.some(l => l.includes('Owed') && l.includes('from Bob'));
+    expect(hasOwedTo && hasOwedFrom).toBe(false);
+  });
+});

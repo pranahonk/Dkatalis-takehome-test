@@ -107,6 +107,10 @@ export class Bank {
   transfer(targetName: string, amount: number): { lines: string[] } {
     const user = this.requireCurrentUser();
 
+    if (amount <= 0) {
+      return { lines: ['Transfer amount must be positive.'] };
+    }
+
     if (targetName === user.name) {
       return { lines: ['Cannot transfer to yourself.'] };
     }
@@ -114,6 +118,24 @@ export class Bank {
     const target = this.customers.get(targetName);
     if (!target) {
       return { lines: [`Sorry, ${targetName} doesn't exist.`] };
+    }
+
+    // Net any mutual debts before processing to prevent contradictory output:
+    // if user owes target AND target owes user, cancel down to one-directional debt.
+    const userDebtToTarget = user.debts.get(targetName) ?? 0;
+    const targetDebtToUserInit = target.debts.get(user.name) ?? 0;
+    if (userDebtToTarget > 0 && targetDebtToUserInit > 0) {
+      const net = userDebtToTarget - targetDebtToUserInit;
+      if (net > 0) {
+        user.debts.set(targetName, net);
+        target.debts.delete(user.name);
+      } else if (net < 0) {
+        target.debts.set(user.name, -net);
+        user.debts.delete(targetName);
+      } else {
+        user.debts.delete(targetName);
+        target.debts.delete(user.name);
+      }
     }
 
     const lines: string[] = [];
@@ -150,11 +172,10 @@ export class Bank {
 
     lines.push(`Your balance is $${user.balance}`);
 
+    // Only one direction can appear: mutual debts were netted at the top.
     if (user.debts.has(targetName)) {
       lines.push(`Owed $${user.debts.get(targetName)} to ${targetName}`);
-    }
-
-    if (target.debts.has(user.name)) {
+    } else if (target.debts.has(user.name)) {
       lines.push(`Owed $${target.debts.get(user.name)} from ${targetName}`);
     }
 
