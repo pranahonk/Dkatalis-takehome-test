@@ -17,6 +17,12 @@ function prompt(): void {
 prompt();
 
 rl.on('line', (line: string) => {
+  // Skip blank lines silently so pressing Enter just re-prompts.
+  if (line.trim() === '') {
+    prompt();
+    return;
+  }
+
   const parsed = parseCommand(line);
   const outputLines = executeCommand(bank, parsed);
 
