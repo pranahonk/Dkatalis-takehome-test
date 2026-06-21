@@ -35,5 +35,10 @@ export function executeCommand(bank: Bank, parsed: ParsedCommand): string[] {
 
     case 'unknown':
       return [`Unknown command: ${parsed.raw}`];
+
+    default: {
+      const _exhaustive: never = parsed;
+      throw new Error(`Unhandled command type: ${(_exhaustive as { type: string }).type}`);
+    }
   }
 }
