@@ -104,6 +104,63 @@ export class Bank {
     return { lines: [`Your balance is $${user.balance}`] };
   }
 
+  transfer(targetName: string, amount: number): { lines: string[] } {
+    const user = this.requireCurrentUser();
+
+    if (targetName === user.name) {
+      return { lines: ['Cannot transfer to yourself.'] };
+    }
+
+    const target = this.customers.get(targetName);
+    if (!target) {
+      return { lines: [`Sorry, ${targetName} doesn't exist.`] };
+    }
+
+    const lines: string[] = [];
+    let remainingAmount = amount;
+
+    const targetDebtToUser = target.debts.get(user.name) ?? 0;
+    if (targetDebtToUser > 0) {
+      const offset = Math.min(remainingAmount, targetDebtToUser);
+      remainingAmount -= offset;
+      const updatedDebt = targetDebtToUser - offset;
+
+      if (updatedDebt === 0) {
+        target.debts.delete(user.name);
+      } else {
+        target.debts.set(user.name, updatedDebt);
+      }
+    }
+
+    if (remainingAmount > 0) {
+      const paid = Math.min(user.balance, remainingAmount);
+      user.balance -= paid;
+      target.balance += paid;
+
+      if (paid > 0) {
+        lines.push(`Transferred $${paid} to ${targetName}`);
+      }
+
+      const shortfall = remainingAmount - paid;
+      if (shortfall > 0) {
+        const existingDebt = user.debts.get(targetName) ?? 0;
+        user.debts.set(targetName, existingDebt + shortfall);
+      }
+    }
+
+    lines.push(`Your balance is $${user.balance}`);
+
+    if (user.debts.has(targetName)) {
+      lines.push(`Owed $${user.debts.get(targetName)} to ${targetName}`);
+    }
+
+    if (target.debts.has(user.name)) {
+      lines.push(`Owed $${target.debts.get(user.name)} from ${targetName}`);
+    }
+
+    return { lines };
+  }
+
   private requireCurrentUser(): Customer {
     if (!this.currentUser) {
       throw new Error('No user logged in');

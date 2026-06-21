@@ -123,3 +123,78 @@ describe('Bank withdraw', () => {
     expect(bank.getCurrentUser()!.balance).toBe(20);
   });
 });
+
+describe('Bank transfer', () => {
+  it('transfers when the sender has enough balance', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+    bank.logout();
+    bank.login('Bob');
+    bank.deposit(80);
+
+    const result = bank.transfer('Alice', 50);
+
+    expect(result.lines).toEqual([
+      'Transferred $50 to Alice',
+      'Your balance is $30'
+    ]);
+    expect(bank.getCurrentUser()!.balance).toBe(30);
+    expect(bank.getCustomer('Alice')!.balance).toBe(150);
+  });
+
+  it('creates debt when sender cannot fully pay transfer', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    bank.deposit(30);
+
+    const result = bank.transfer('Alice', 100);
+
+    expect(result.lines).toEqual([
+      'Transferred $30 to Alice',
+      'Your balance is $0',
+      'Owed $70 to Alice'
+    ]);
+    expect(bank.getCurrentUser()!.debts.get('Alice')).toBe(70);
+  });
+
+  it('offsets target debt before moving cash', () => {
+    const bank = new Bank();
+    bank.login('Bob');
+    bank.getCurrentUser()!.debts.set('Alice', 40);
+    bank.logout();
+    bank.login('Alice');
+    bank.deposit(210);
+
+    const result = bank.transfer('Bob', 30);
+
+    expect(result.lines).toEqual([
+      'Your balance is $210',
+      'Owed $10 from Bob'
+    ]);
+    expect(bank.getCustomer('Bob')!.debts.get('Alice')).toBe(10);
+    expect(bank.getCurrentUser()!.balance).toBe(210);
+  });
+
+  it('rejects transfer to unknown customer', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+
+    const result = bank.transfer('Ghost', 50);
+
+    expect(result.lines).toEqual(["Sorry, Ghost doesn't exist."]);
+  });
+
+  it('rejects transfer to self', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+
+    const result = bank.transfer('Alice', 50);
+
+    expect(result.lines).toEqual(['Cannot transfer to yourself.']);
+  });
+});
