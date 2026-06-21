@@ -51,3 +51,51 @@ describe('Bank session and registry', () => {
     expect(result.owedFromOthers.get('Bob')).toBe(40);
   });
 });
+
+describe('Bank deposit', () => {
+  it('adds funds when there is no debt', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+
+    const result = bank.deposit(100);
+
+    expect(result.lines).toEqual(['Your balance is $100']);
+    expect(bank.getCurrentUser()!.balance).toBe(100);
+  });
+
+  it('automatically pays existing debt on deposit', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    bank.getCurrentUser()!.debts.set('Alice', 70);
+
+    const result = bank.deposit(30);
+
+    expect(result.lines).toEqual([
+      'Transferred $30 to Alice',
+      'Your balance is $0',
+      'Owed $40 to Alice'
+    ]);
+    expect(bank.getCurrentUser()!.balance).toBe(0);
+    expect(bank.getCurrentUser()!.debts.get('Alice')).toBe(40);
+    expect(bank.getCustomer('Alice')!.balance).toBe(30);
+  });
+
+  it('clears debt when deposit fully covers it', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.logout();
+    bank.login('Bob');
+    bank.getCurrentUser()!.debts.set('Alice', 20);
+
+    const result = bank.deposit(100);
+
+    expect(result.lines).toEqual([
+      'Transferred $20 to Alice',
+      'Your balance is $80'
+    ]);
+    expect(bank.getCurrentUser()!.debts.has('Alice')).toBe(false);
+    expect(bank.getCurrentUser()!.balance).toBe(80);
+  });
+});

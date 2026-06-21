@@ -55,4 +55,48 @@ export class Bank {
 
     return owed;
   }
+
+  deposit(amount: number): { lines: string[] } {
+    const user = this.requireCurrentUser();
+    const lines: string[] = [];
+
+    user.balance += amount;
+
+    for (const [creditorName, owedAmount] of Array.from(user.debts.entries())) {
+      if (user.balance === 0) {
+        break;
+      }
+
+      const paid = Math.min(user.balance, owedAmount);
+      const creditor = this.customers.get(creditorName)!;
+
+      user.balance -= paid;
+      creditor.balance += paid;
+
+      const remaining = owedAmount - paid;
+      if (remaining === 0) {
+        user.debts.delete(creditorName);
+      } else {
+        user.debts.set(creditorName, remaining);
+      }
+
+      lines.push(`Transferred $${paid} to ${creditorName}`);
+    }
+
+    lines.push(`Your balance is $${user.balance}`);
+
+    for (const [creditorName, owedAmount] of user.debts.entries()) {
+      lines.push(`Owed $${owedAmount} to ${creditorName}`);
+    }
+
+    return { lines };
+  }
+
+  private requireCurrentUser(): Customer {
+    if (!this.currentUser) {
+      throw new Error('No user logged in');
+    }
+
+    return this.currentUser;
+  }
 }
