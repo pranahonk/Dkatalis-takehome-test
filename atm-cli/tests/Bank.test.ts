@@ -137,7 +137,7 @@ describe('Bank transfer', () => {
 
     expect(result.lines).toEqual([
       'Transferred $50 to Alice',
-      'Your balance is $30'
+      'your balance is $30'
     ]);
     expect(bank.getCurrentUser()!.balance).toBe(30);
     expect(bank.getCustomer('Alice')!.balance).toBe(150);
@@ -154,7 +154,7 @@ describe('Bank transfer', () => {
 
     expect(result.lines).toEqual([
       'Transferred $30 to Alice',
-      'Your balance is $0',
+      'your balance is $0',
       'Owed $70 to Alice'
     ]);
     expect(bank.getCurrentUser()!.debts.get('Alice')).toBe(70);
@@ -171,7 +171,7 @@ describe('Bank transfer', () => {
     const result = bank.transfer('Bob', 30);
 
     expect(result.lines).toEqual([
-      'Your balance is $210',
+      'your balance is $210',
       'Owed $10 from Bob'
     ]);
     expect(bank.getCustomer('Bob')!.debts.get('Alice')).toBe(10);

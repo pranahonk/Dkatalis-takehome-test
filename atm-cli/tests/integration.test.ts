@@ -6,10 +6,9 @@
  * oracle output shown in the problem statement.
  *
  * Note: PROBLEM_ATM.md step 6 ("transfer Alice 50") prints "your balance is $30"
- * with a lowercase "y". All other balance lines use "Your balance is $…". This is
- * a typo in the problem document — the implementation consistently capitalises
- * "Your", which is the correct and readable output. The integration test therefore
- * asserts the capitalised form throughout.
+ * with a lowercase "y". The implementation follows the literal spec: the transfer
+ * method emits "your balance is $…" (lowercase). All other commands (login, deposit,
+ * withdraw) continue to emit "Your balance is $…" (uppercase).
  */
 
 import { Bank } from '../src/Bank';
@@ -107,7 +106,7 @@ describe('Full sample session (PROBLEM_ATM.md oracle)', () => {
     const { bank } = sessionUpTo(5);
     expect(run(bank, 'transfer Alice 50')).toEqual([
       'Transferred $50 to Alice',
-      'Your balance is $30',
+      'your balance is $30',
     ]);
   });
 
@@ -115,7 +114,7 @@ describe('Full sample session (PROBLEM_ATM.md oracle)', () => {
     const { bank } = sessionUpTo(6);
     expect(run(bank, 'transfer Alice 100')).toEqual([
       'Transferred $30 to Alice',
-      'Your balance is $0',
+      'your balance is $0',
       'Owed $70 to Alice',
     ]);
   });
@@ -146,7 +145,7 @@ describe('Full sample session (PROBLEM_ATM.md oracle)', () => {
   it('step 11 – transfer Bob 30 (Alice): offsets debt; Alice balance $210 unchanged, Bob owes $10', () => {
     const { bank } = sessionUpTo(10);
     expect(run(bank, 'transfer Bob 30')).toEqual([
-      'Your balance is $210',
+      'your balance is $210',
       'Owed $10 from Bob',
     ]);
   });
@@ -209,16 +208,16 @@ describe('Full sample session (PROBLEM_ATM.md oracle)', () => {
     // Step 5
     expect(exec('deposit 80')).toEqual(['Your balance is $80']);
 
-    // Step 6 — spec has lowercase typo ("your balance"); implementation correctly outputs 'Your'
+    // Step 6 — literal spec output: 'your balance is $30' (lowercase, as written in PROBLEM_ATM.md)
     expect(exec('transfer Alice 50')).toEqual([
       'Transferred $50 to Alice',
-      'Your balance is $30',
+      'your balance is $30',
     ]);
 
     // Step 7
     expect(exec('transfer Alice 100')).toEqual([
       'Transferred $30 to Alice',
-      'Your balance is $0',
+      'your balance is $0',
       'Owed $70 to Alice',
     ]);
 
@@ -241,7 +240,7 @@ describe('Full sample session (PROBLEM_ATM.md oracle)', () => {
 
     // Step 11
     expect(exec('transfer Bob 30')).toEqual([
-      'Your balance is $210',
+      'your balance is $210',
       'Owed $10 from Bob',
     ]);
 

@@ -172,7 +172,7 @@ export class Bank {
       }
     }
 
-    lines.push(`Your balance is $${user.balance}`);
+    lines.push(`your balance is $${user.balance}`);
 
     // Only one direction can appear: mutual debts were netted at the top.
     // Use the locally-tracked remainingTargetDebt rather than re-reading the map.
