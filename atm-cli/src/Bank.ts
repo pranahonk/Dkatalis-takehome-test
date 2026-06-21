@@ -141,16 +141,18 @@ export class Bank {
     const lines: string[] = [];
     let remainingAmount = amount;
 
+    // Apply any debt the target owes the user as an offset before moving cash.
     const targetDebtToUser = target.debts.get(user.name) ?? 0;
+    let remainingTargetDebt = targetDebtToUser;
     if (targetDebtToUser > 0) {
       const offset = Math.min(remainingAmount, targetDebtToUser);
       remainingAmount -= offset;
-      const updatedDebt = targetDebtToUser - offset;
+      remainingTargetDebt = targetDebtToUser - offset;
 
-      if (updatedDebt === 0) {
+      if (remainingTargetDebt === 0) {
         target.debts.delete(user.name);
       } else {
-        target.debts.set(user.name, updatedDebt);
+        target.debts.set(user.name, remainingTargetDebt);
       }
     }
 
@@ -173,10 +175,11 @@ export class Bank {
     lines.push(`Your balance is $${user.balance}`);
 
     // Only one direction can appear: mutual debts were netted at the top.
+    // Use the locally-tracked remainingTargetDebt rather than re-reading the map.
     if (user.debts.has(targetName)) {
       lines.push(`Owed $${user.debts.get(targetName)} to ${targetName}`);
-    } else if (target.debts.has(user.name)) {
-      lines.push(`Owed $${target.debts.get(user.name)} from ${targetName}`);
+    } else if (remainingTargetDebt > 0) {
+      lines.push(`Owed $${remainingTargetDebt} from ${targetName}`);
     }
 
     return { lines };
