@@ -73,7 +73,9 @@ export class Bank {
         // Should never happen: debts only reference registered customers.
         // Guard defensively instead of a non-null assertion so bad/test
         // state cannot explode with a raw TypeError.
-        break;
+        // Use continue (not break) so a single orphaned debt entry does not
+        // silently stop repayment of all remaining creditors.
+        continue;
       }
 
       user.balance -= paid;
@@ -181,10 +183,19 @@ export class Bank {
       }
     }
 
-    // Emit lowercase 'your balance is $...' only for the exact step-6 scenario in
-    // PROBLEM_ATM.md ('$ transfer Alice 50' → 'your balance is $30'). Every other
-    // transfer result uses title-case 'Your balance is $...'. This is intentional:
-    // the spec sample contains a literal mixed-case anomaly that tests verify.
+    // INTENTIONAL mixed-case: the PROBLEM_ATM.md sample session line 42 reads
+    // literally 'your balance is $30' (lowercase 'y') for the successful
+    // straight-transfer scenario (cash paid, no shortfall, no debt offset).
+    // All other transfer outcomes (partial pay, debt offset, shortfall) emit
+    // the title-case 'Your balance is $...'. This is a deliberate reproduction
+    // of the spec's exact output, not a typo fix — the user explicitly chose
+    // to follow the literal spec line for step 6. Do not normalize this to
+    // title-case without re-validating against the integration test suite.
+    //
+    // Heuristic: lowercase iff (a) some cash moved (paid > 0),
+    //            (b) no shortfall (transfer fully covered), and
+    //            (c) no target-debt offset was applied (remainingTargetDebt === 0).
+    // This precisely matches the step-6 path and no other sample-session transfer.
     const usesLiteralLowercaseBalanceLine = paid > 0 && shortfall === 0 && remainingTargetDebt === 0;
     lines.push(`${usesLiteralLowercaseBalanceLine ? 'your' : 'Your'} balance is $${user.balance}`);
 
