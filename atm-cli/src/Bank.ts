@@ -92,6 +92,18 @@ export class Bank {
     return { lines };
   }
 
+
+  withdraw(amount: number): { lines: string[] } {
+    const user = this.requireCurrentUser();
+
+    if (user.balance < amount) {
+      return { lines: ["Sorry, you don't have enough balance."] };
+    }
+
+    user.balance -= amount;
+    return { lines: [`Your balance is $${user.balance}`] };
+  }
+
   private requireCurrentUser(): Customer {
     if (!this.currentUser) {
       throw new Error('No user logged in');

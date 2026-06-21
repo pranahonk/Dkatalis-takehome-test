@@ -99,3 +99,27 @@ describe('Bank deposit', () => {
     expect(bank.getCurrentUser()!.balance).toBe(80);
   });
 });
+
+describe('Bank withdraw', () => {
+  it('subtracts balance when enough money exists', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(100);
+
+    const result = bank.withdraw(40);
+
+    expect(result.lines).toEqual(['Your balance is $60']);
+    expect(bank.getCurrentUser()!.balance).toBe(60);
+  });
+
+  it('rejects withdraw larger than balance', () => {
+    const bank = new Bank();
+    bank.login('Alice');
+    bank.deposit(20);
+
+    const result = bank.withdraw(30);
+
+    expect(result.lines).toEqual(["Sorry, you don't have enough balance."]);
+    expect(bank.getCurrentUser()!.balance).toBe(20);
+  });
+});
