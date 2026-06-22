@@ -12,8 +12,9 @@ From the repository root:
 
 ## Test
 
+From the repository root:
+
 ```bash
-cd atm-cli
 npm install
 npm test
 npm run test:coverage
